@@ -80,7 +80,7 @@ namespace controller
        * \brief callback function for setting the desired velocity using a topic
        * @param cmd_vel Velocity command of the base in m/s and rad/s
        */
-      void setCommand(const geometry_msgs::Twist &cmd_vel);
+      void setCommand(const pr2_mechanism_controllers::BaseDirectCommand&);
 
       /*!
        * \brief Returns the current position command
@@ -154,6 +154,12 @@ namespace controller
        * current commanded speed due to acceleration limits imposed by the controller.
        */
       geometry_msgs::Twist cmd_vel_t_;
+
+      pr2_mechanism_controllers::BaseDirectCommand direct_cmd_vel_t_;
+
+      pr2_mechanism_controllers::BaseDirectCommand direct_cmd_vel_;
+
+      pr2_mechanism_controllers::BaseDirectCommand desired_cmd_;
 
       /*!
        * \brief speed command vector used internally to represent the current commanded speed

@@ -180,8 +180,12 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
 }
 
 // Set the base velocity command
-void UnabstractedBaseController::setCommand(const geometry_msgs::Twist &cmd_vel)
+void UnabstractedBaseController::setCommand(const pr2_mechanism_controllers::BaseDirectCommand &direct_cmd_vel)
 {
+  // TODO do some clamping procedure
+  direct_cmd_vel_t_ = direct_cmd_vel;
+  cmd_received_timestamp_ = base_kin_.robot_state_->getTime();
+  /*
   double vel_mag = sqrt(cmd_vel.linear.x * cmd_vel.linear.x + cmd_vel.linear.y * cmd_vel.linear.y);
   double clamped_vel_mag = filters::clamp(vel_mag,-max_translational_velocity_, max_translational_velocity_);
   if(vel_mag > EPS)
@@ -210,6 +214,7 @@ void UnabstractedBaseController::setCommand(const geometry_msgs::Twist &cmd_vel)
   {
     ROS_DEBUG("BaseController:: caster speed cmd:: %d %f",i,(base_kin_.caster_[i].steer_velocity_desired_));
   }
+  */
   new_cmd_available_ = true;
 }
 
@@ -286,9 +291,7 @@ void UnabstractedBaseController::update()
   {
     if(pthread_mutex_trylock(&pr2_base_controller_lock_) == 0)
     {
-      desired_vel_.linear.x = cmd_vel_t_.linear.x;
-      desired_vel_.linear.y = cmd_vel_t_.linear.y;
-      desired_vel_.angular.z = cmd_vel_t_.angular.z;
+      desired_cmd_ = direct_cmd_vel_t_;
       new_cmd_available_ = false;
       pthread_mutex_unlock(&pr2_base_controller_lock_);
     }
@@ -296,12 +299,19 @@ void UnabstractedBaseController::update()
 
   if((current_time - cmd_received_timestamp_).toSec() > timeout_)
   {
-    cmd_vel_.linear.x = 0;
-    cmd_vel_.linear.y = 0;
-    cmd_vel_.angular.z = 0;
+    direct_cmd_vel_.caster0_vel = 0;
+    direct_cmd_vel_.caster1_vel = 0;
+    direct_cmd_vel_.caster2_vel = 0;
+    direct_cmd_vel_.caster3_vel = 0;
+    direct_cmd_vel_.wheel0_vel = 0;
+    direct_cmd_vel_.wheel1_vel = 0;
+    direct_cmd_vel_.wheel2_vel = 0;
+    direct_cmd_vel_.wheel3_vel = 0;
   }
-  else
-    cmd_vel_ = interpolateCommand(cmd_vel_, desired_vel_, max_accel_, dT);
+  else{
+    direct_cmd_vel_ = desired_cmd_; // TODO interpolate
+    // cmd_vel_ = interpolateCommand(cmd_vel_, desired_vel_, max_accel_, dT);
+  }
 
   computeJointCommands(dT);
 
@@ -430,30 +440,16 @@ void UnabstractedBaseController::setDesiredCasterSteer()
 
 void UnabstractedBaseController::computeDesiredWheelSpeeds()
 {
-  geometry_msgs::Twist wheel_point_velocity;
-  geometry_msgs::Twist wheel_point_velocity_projected;
-  geometry_msgs::Twist wheel_caster_steer_component;
-  geometry_msgs::Twist caster_2d_velocity;
-
-  caster_2d_velocity.linear.x = 0;
-  caster_2d_velocity.linear.y = 0;
-  caster_2d_velocity.angular.z = 0;
-
-  double steer_angle_actual = 0;
+  std::array<double, 4> vel_arr = {
+    direct_cmd_vel_.wheel0_vel,
+    direct_cmd_vel_.wheel1_vel,
+    direct_cmd_vel_.wheel2_vel,
+    direct_cmd_vel_.wheel3_vel
+  };
+  std::cout << direct_cmd_vel_ << std::endl; 
   for(int i = 0; i < (int) base_kin_.num_wheels_; i++)
   {
-    base_kin_.wheel_[i].updatePosition();
-    caster_2d_velocity.angular.z = base_kin_.wheel_[i].parent_->steer_velocity_desired_;
-    steer_angle_actual = base_kin_.wheel_[i].parent_->joint_->position_;
-    wheel_point_velocity = base_kin_.pointVel2D(base_kin_.wheel_[i].position_, cmd_vel_);
-    wheel_caster_steer_component = base_kin_.pointVel2D(base_kin_.wheel_[i].offset_, caster_2d_velocity);
-
-    double costh = cos(-steer_angle_actual);
-    double sinth = sin(-steer_angle_actual);
-
-    wheel_point_velocity_projected.linear.x = costh * wheel_point_velocity.linear.x - sinth * wheel_point_velocity.linear.y;
-    wheel_point_velocity_projected.linear.y = sinth * wheel_point_velocity.linear.x + costh * wheel_point_velocity.linear.y;
-    base_kin_.wheel_[i].wheel_speed_cmd_ = (wheel_point_velocity_projected.linear.x + wheel_caster_steer_component.linear.x) / (base_kin_.wheel_[i].wheel_radius_);
+    base_kin_.wheel_[i].wheel_speed_cmd_ = vel_arr[i];
   }
 }
 
@@ -476,16 +472,18 @@ void UnabstractedBaseController::updateJointControllers()
 void UnabstractedBaseController::commandCallback(const geometry_msgs::TwistConstPtr& msg)
 {
   pthread_mutex_lock(&pr2_base_controller_lock_);
+  /*
   base_vel_msg_ = *msg;
   this->setCommand(base_vel_msg_);
+  */
   pthread_mutex_unlock(&pr2_base_controller_lock_);
 }
 
 void UnabstractedBaseController::directCommandCallback(const pr2_mechanism_controllers::BaseDirectCommandConstPtr& msg)
 {
   //currently do nothing
-  ROS_INFO("[ISHIDA] got message");
   pthread_mutex_lock(&pr2_base_controller_lock_);
+  this->setCommand(*msg);
   pthread_mutex_unlock(&pr2_base_controller_lock_);
 }
 } // namespace
