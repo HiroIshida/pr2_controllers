@@ -121,9 +121,13 @@ namespace controller
 
       ros::NodeHandle root_handle_;
 
+
       ros::Subscriber cmd_sub_;
 
       ros::Subscriber cmd_sub_deprecated_;
+
+      ros::Subscriber direct_cmd_sub_;
+
 
       /*!
        * \brief timeout specifying time that the controller waits before setting the current velocity command to zero
@@ -240,6 +244,8 @@ namespace controller
        * \brief deal with Twist commands
        */
       void commandCallback(const geometry_msgs::TwistConstPtr& msg);
+
+      void directCommandCallback(const pr2_mechanism_controllers::BaseDirectCommandConstPtr& msg);
 
       /*!
        * \brief callback message, used to remember where the base is commanded to go

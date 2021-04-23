@@ -69,6 +69,7 @@ UnabstractedBaseController::~UnabstractedBaseController()
 {
   cmd_sub_.shutdown();
   cmd_sub_deprecated_.shutdown();
+  direct_cmd_sub_.shutdown();
 }
 
 bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ros::NodeHandle &n)
@@ -110,6 +111,7 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
 
   //  cmd_sub_deprecated_ = root_handle_.subscribe<geometry_msgs::Twist>("cmd_vel", 1, &UnabstractedBaseController::commandCallback, this);
   cmd_sub_ = node_.subscribe<geometry_msgs::Twist>("command", 1, &UnabstractedBaseController::commandCallback, this);
+  direct_cmd_sub_ = node_.subscribe<pr2_mechanism_controllers::BaseDirectCommand>("direct_command", 1, &UnabstractedBaseController::directCommandCallback, this);
 
   //casters
   caster_controller_.resize(base_kin_.num_casters_);
@@ -476,6 +478,14 @@ void UnabstractedBaseController::commandCallback(const geometry_msgs::TwistConst
   pthread_mutex_lock(&pr2_base_controller_lock_);
   base_vel_msg_ = *msg;
   this->setCommand(base_vel_msg_);
+  pthread_mutex_unlock(&pr2_base_controller_lock_);
+}
+
+void UnabstractedBaseController::directCommandCallback(const pr2_mechanism_controllers::BaseDirectCommandConstPtr& msg)
+{
+  //currently do nothing
+  ROS_INFO("[ISHIDA] got message");
+  pthread_mutex_lock(&pr2_base_controller_lock_);
   pthread_mutex_unlock(&pr2_base_controller_lock_);
 }
 } // namespace
