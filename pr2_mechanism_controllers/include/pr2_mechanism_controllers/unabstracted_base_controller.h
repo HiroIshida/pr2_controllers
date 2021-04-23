@@ -41,6 +41,7 @@
 #include <robot_mechanism_controllers/joint_velocity_controller.h>
 #include <pr2_mechanism_controllers/base_kinematics.h>
 #include <geometry_msgs/Twist.h>
+#include <pr2_mechanism_controllers/BaseDirectCommand.h>
 #include <angles/angles.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>

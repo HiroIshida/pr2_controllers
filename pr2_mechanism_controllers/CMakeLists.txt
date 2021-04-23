@@ -10,6 +10,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 add_message_files(
    DIRECTORY msg
    FILES
+   BaseDirectCommand.msg
    BaseControllerState2.msg
    BaseControllerState.msg
    BaseOdometryState.msg
