@@ -48,6 +48,7 @@ add_library( pr2_mechanism_controllers
   src/caster_controller.cpp
   src/base_kinematics.cpp
   src/pr2_odometry.cpp
+  src/unabstracted_base_controller.cpp
   src/pr2_base_controller.cpp
   src/pr2_base_controller2.cpp
   src/pr2_gripper_controller.cpp
