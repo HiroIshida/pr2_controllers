@@ -258,10 +258,6 @@ namespace controller
        */
       double cmd_vel_rot_eps_;
 
-      /*!
-       * \brief Time interval between state publishing
-       */
-      double state_publish_time_,state_publish_rate_;
 
       /*!
        * \brief Time interval between state publishing
@@ -272,14 +268,6 @@ namespace controller
        * \brief minimum tranlational velocity value allowable
        */
       double cmd_vel_trans_eps_;
-
-
-      /*!
-       * \brief Publish the state
-       */
-      void publishState(const ros::Time &current_time);
-
-      bool publish_state_;
 
       /*!
        * \brief The pid controllers for caster position

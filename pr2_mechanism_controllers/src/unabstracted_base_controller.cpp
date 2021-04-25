@@ -60,7 +60,6 @@ UnabstractedBaseController::UnabstractedBaseController()
   cmd_vel_t_.angular.z = 0;
 
   new_cmd_available_ = false;
-  last_publish_time_ = ros::Time(0.0);
 
   pthread_mutex_init(&pr2_base_controller_lock_, NULL);
 }
@@ -95,17 +94,6 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
 
   node_.param<double> ("kp_caster_steer", kp_caster_steer_, 80.0);
   node_.param<double> ("timeout", timeout_, 1.0);
-  node_.param<double> ("state_publish_rate", state_publish_rate_,2.0);
-  if(state_publish_rate_ <= 0.0)
-  {
-    publish_state_ = false;
-    state_publish_time_ = 0.0;
-  }
-  else
-  {
-    publish_state_ = true;
-    state_publish_time_ = 1.0/state_publish_rate_;
-  }
 
   direct_cmd_sub_ = node_.subscribe<pr2_mechanism_controllers::BaseDirectCommand>("direct_command", 1, &UnabstractedBaseController::directCommandCallback, this);
 
@@ -274,51 +262,8 @@ void UnabstractedBaseController::update()
 
   updateJointControllers();
 
-  if(publish_state_)
-    publishState(current_time);
-
   last_time_ = current_time;
 
-}
-
-void UnabstractedBaseController::publishState(const ros::Time &time)
-{
-  if((time - last_publish_time_).toSec()  < state_publish_time_)
-  {
-    return;
-  }
-
-  if(state_publisher_->trylock())
-  {
-    state_publisher_->msg_.command.linear.x  = cmd_vel_.linear.x;
-    state_publisher_->msg_.command.linear.y  = cmd_vel_.linear.y;
-    state_publisher_->msg_.command.angular.z = cmd_vel_.angular.z;
-
-    for(int i = 0; i < base_kin_.num_casters_; i++)
-    {
-      state_publisher_->msg_.joint_names[i] = base_kin_.caster_[i].joint_name_;
-      state_publisher_->msg_.joint_velocity_measured[i] = base_kin_.caster_[i].joint_->velocity_;
-      state_publisher_->msg_.joint_velocity_commanded[i]= base_kin_.caster_[i].steer_velocity_desired_;
-      state_publisher_->msg_.joint_velocity_error[i]    = base_kin_.caster_[i].joint_->velocity_ - base_kin_.caster_[i].steer_velocity_desired_;
-
-      state_publisher_->msg_.joint_effort_measured[i]  = base_kin_.caster_[i].joint_->measured_effort_;
-      state_publisher_->msg_.joint_effort_commanded[i] = base_kin_.caster_[i].joint_->commanded_effort_;
-      state_publisher_->msg_.joint_effort_error[i]     = base_kin_.caster_[i].joint_->measured_effort_ - base_kin_.caster_[i].joint_->commanded_effort_;
-    }
-    for(int i = 0; i < base_kin_.num_wheels_; i++)
-    {
-      state_publisher_->msg_.joint_names[i+base_kin_.num_casters_] = base_kin_.wheel_[i].joint_name_;
-      state_publisher_->msg_.joint_velocity_measured[i+base_kin_.num_casters_] = base_kin_.wheel_[i].wheel_speed_actual_;
-      state_publisher_->msg_.joint_velocity_commanded[i+base_kin_.num_casters_]= base_kin_.wheel_[i].wheel_speed_error_;
-      state_publisher_->msg_.joint_velocity_error[i+base_kin_.num_casters_]    = base_kin_.wheel_[i].wheel_speed_cmd_;
-
-      state_publisher_->msg_.joint_effort_measured[i+base_kin_.num_casters_]  = base_kin_.wheel_[i].joint_->measured_effort_;
-      state_publisher_->msg_.joint_effort_commanded[i+base_kin_.num_casters_] = base_kin_.wheel_[i].joint_->commanded_effort_;
-      state_publisher_->msg_.joint_effort_error[i+base_kin_.num_casters_]     = base_kin_.wheel_[i].joint_->measured_effort_ - base_kin_.wheel_[i].joint_->commanded_effort_;
-    }
-    state_publisher_->unlockAndPublish();
-    last_publish_time_ = time;
-  }
 }
 
 void UnabstractedBaseController::computeJointCommands(const double &dT)
