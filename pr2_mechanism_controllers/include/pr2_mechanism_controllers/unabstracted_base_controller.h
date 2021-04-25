@@ -82,11 +82,6 @@ namespace controller
        */
       void setCommand(const pr2_mechanism_controllers::BaseDirectCommand&);
 
-      /*!
-       * \brief Returns the current position command
-       * @return Current velocity command
-       */
-      geometry_msgs::Twist getCommand();
 
       /*!
        * \brief class where the robot's information is computed and stored
@@ -120,11 +115,6 @@ namespace controller
       ros::NodeHandle node_;
 
       ros::NodeHandle root_handle_;
-
-
-      ros::Subscriber cmd_sub_;
-
-      ros::Subscriber cmd_sub_deprecated_;
 
       ros::Subscriber direct_cmd_sub_;
 

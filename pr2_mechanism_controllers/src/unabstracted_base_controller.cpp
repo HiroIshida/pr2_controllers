@@ -67,8 +67,6 @@ UnabstractedBaseController::UnabstractedBaseController()
 
 UnabstractedBaseController::~UnabstractedBaseController()
 {
-  cmd_sub_.shutdown();
-  cmd_sub_deprecated_.shutdown();
   direct_cmd_sub_.shutdown();
 }
 
@@ -109,8 +107,6 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
     state_publish_time_ = 1.0/state_publish_rate_;
   }
 
-  //  cmd_sub_deprecated_ = root_handle_.subscribe<geometry_msgs::Twist>("cmd_vel", 1, &UnabstractedBaseController::commandCallback, this);
-  cmd_sub_ = node_.subscribe<geometry_msgs::Twist>("command", 1, &UnabstractedBaseController::commandCallback, this);
   direct_cmd_sub_ = node_.subscribe<pr2_mechanism_controllers::BaseDirectCommand>("direct_command", 1, &UnabstractedBaseController::directCommandCallback, this);
 
   //casters
@@ -185,36 +181,6 @@ void UnabstractedBaseController::setCommand(const pr2_mechanism_controllers::Bas
   // TODO do some clamping procedure
   direct_cmd_vel_t_ = direct_cmd_vel;
   cmd_received_timestamp_ = base_kin_.robot_state_->getTime();
-  /*
-  double vel_mag = sqrt(cmd_vel.linear.x * cmd_vel.linear.x + cmd_vel.linear.y * cmd_vel.linear.y);
-  double clamped_vel_mag = filters::clamp(vel_mag,-max_translational_velocity_, max_translational_velocity_);
-  if(vel_mag > EPS)
-  {
-    cmd_vel_t_.linear.x = cmd_vel.linear.x * clamped_vel_mag / vel_mag;
-    cmd_vel_t_.linear.y = cmd_vel.linear.y * clamped_vel_mag / vel_mag;
-  }
-  else
-  {
-    cmd_vel_t_.linear.x = 0.0;
-    cmd_vel_t_.linear.y = 0.0;
-  }
-  cmd_vel_t_.angular.z = filters::clamp(cmd_vel.angular.z, -max_rotational_velocity_, max_rotational_velocity_);
-  cmd_received_timestamp_ = base_kin_.robot_state_->getTime();
-
-  ROS_DEBUG("BaseController:: command received: %f %f %f",cmd_vel.linear.x,cmd_vel.linear.y,cmd_vel.angular.z);
-  ROS_DEBUG("BaseController:: command current: %f %f %f", cmd_vel_.linear.x,cmd_vel_.linear.y,cmd_vel_.angular.z);
-  ROS_DEBUG("BaseController:: clamped vel: %f", clamped_vel_mag);
-  ROS_DEBUG("BaseController:: vel: %f", vel_mag);
-
-  for(int i=0; i < (int) base_kin_.num_wheels_; i++)
-  {
-    ROS_DEBUG("BaseController:: wheel speed cmd:: %d %f",i,(base_kin_.wheel_[i].direction_multiplier_*base_kin_.wheel_[i].wheel_speed_cmd_));
-  }
-  for(int i=0; i < (int) base_kin_.num_casters_; i++)
-  {
-    ROS_DEBUG("BaseController:: caster speed cmd:: %d %f",i,(base_kin_.caster_[i].steer_velocity_desired_));
-  }
-  */
   new_cmd_available_ = true;
 }
 
@@ -255,17 +221,6 @@ geometry_msgs::Twist UnabstractedBaseController::interpolateCommand(const geomet
   result.linear.y = start.linear.y + alpha_min * (end.linear.y - start.linear.y);
   result.angular.z = start.angular.z + alpha_min * (end.angular.z - start.angular.z);
   return result;
-}
-
-geometry_msgs::Twist UnabstractedBaseController::getCommand()// Return the current velocity command
-{
-  geometry_msgs::Twist cmd_vel;
-  pthread_mutex_lock(&pr2_base_controller_lock_);
-  cmd_vel.linear.x = cmd_vel_.linear.x;
-  cmd_vel.linear.y = cmd_vel_.linear.y;
-  cmd_vel.angular.z = cmd_vel_.angular.z;
-  pthread_mutex_unlock(&pr2_base_controller_lock_);
-  return cmd_vel;
 }
 
 void UnabstractedBaseController::starting()
@@ -393,52 +348,6 @@ void UnabstractedBaseController::computeDesiredCasterSteer(const double &dT)
   for(int i=0; i < base_kin_.num_casters_; i++){
     base_kin_.caster_[i].steer_velocity_desired_ = vel_arr[i];
   }
-  /*
-  geometry_msgs::Twist result;
-
-  double steer_angle_desired(0.0), steer_angle_desired_m_pi(0.0);
-  double error_steer(0.0), error_steer_m_pi(0.0);
-  double trans_vel = sqrt(cmd_vel_.linear.x * cmd_vel_.linear.x + cmd_vel_.linear.y * cmd_vel_.linear.y);
-
-  for(int i = 0; i < base_kin_.num_casters_; i++)
-  {
-    filtered_velocity_[i] = 0.0 - base_kin_.caster_[i].joint_->velocity_;
-  }
-  caster_vel_filter_.update(filtered_velocity_,filtered_velocity_);
-
-  for(int i = 0; i < base_kin_.num_casters_; i++)
-  {
-    result = base_kin_.pointVel2D(base_kin_.caster_[i].offset_, cmd_vel_);
-    if(trans_vel < EPS && fabs(cmd_vel_.angular.z) < EPS)
-    {
-      steer_angle_desired = base_kin_.caster_[i].steer_angle_stored_;
-    }
-    else
-    {
-      steer_angle_desired = atan2(result.linear.y, result.linear.x);
-      base_kin_.caster_[i].steer_angle_stored_ = steer_angle_desired;
-    }
-    steer_angle_desired_m_pi = angles::normalize_angle(steer_angle_desired + M_PI);
-    error_steer = angles::shortest_angular_distance(
-          base_kin_.caster_[i].joint_->position_,
-          steer_angle_desired);
-    error_steer_m_pi = angles::shortest_angular_distance(
-          base_kin_.caster_[i].joint_->position_,
-          steer_angle_desired_m_pi);
-
-    if(fabs(error_steer_m_pi) < fabs(error_steer))
-    {
-      error_steer = error_steer_m_pi;
-      steer_angle_desired = steer_angle_desired_m_pi;
-    }
-    //    base_kin_.caster_[i].steer_velocity_desired_ = -kp_caster_steer_ * error_steer;
-    base_kin_.caster_[i].steer_velocity_desired_ = caster_position_pid_[i].computeCommand(
-          error_steer,
-          filtered_velocity_[i],
-          ros::Duration(dT));
-    base_kin_.caster_[i].caster_position_error_ = error_steer;
-  }
-  */
 }
 
 void UnabstractedBaseController::setDesiredCasterSteer()
@@ -478,16 +387,6 @@ void UnabstractedBaseController::updateJointControllers()
     wheel_controller_[i]->update();
   for(int i = 0; i < base_kin_.num_casters_; i++)
     caster_controller_[i]->update();
-}
-
-void UnabstractedBaseController::commandCallback(const geometry_msgs::TwistConstPtr& msg)
-{
-  pthread_mutex_lock(&pr2_base_controller_lock_);
-  /*
-  base_vel_msg_ = *msg;
-  this->setCommand(base_vel_msg_);
-  */
-  pthread_mutex_unlock(&pr2_base_controller_lock_);
 }
 
 void UnabstractedBaseController::directCommandCallback(const pr2_mechanism_controllers::BaseDirectCommandConstPtr& msg)
