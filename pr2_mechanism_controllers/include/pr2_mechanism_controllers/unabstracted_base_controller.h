@@ -36,7 +36,6 @@
  */
 
 #include <ros/node_handle.h>
-#include <realtime_tools/realtime_publisher.h>
 #include <pr2_mechanism_controllers/BaseControllerState.h>
 #include <robot_mechanism_controllers/joint_velocity_controller.h>
 #include <pr2_mechanism_controllers/base_kinematics.h>
@@ -201,10 +200,6 @@ namespace controller
        */
       std::vector<boost::shared_ptr<JointVelocityController> > caster_controller_;
 
-      /*!
-       * \brief publishes information about the caster and wheel controllers
-       */
-      boost::scoped_ptr<realtime_tools::RealtimePublisher<pr2_mechanism_controllers::BaseControllerState> > state_publisher_;
 
       /*!
        * \brief computes the desired caster steers and wheel speeds
@@ -257,12 +252,6 @@ namespace controller
        * \brief minimum rotational velocity value allowable
        */
       double cmd_vel_rot_eps_;
-
-
-      /*!
-       * \brief Time interval between state publishing
-       */
-      ros::Time last_publish_time_;
 
       /*!
        * \brief minimum tranlational velocity value allowable

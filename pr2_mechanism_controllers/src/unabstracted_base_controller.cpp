@@ -74,16 +74,6 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
   if(!base_kin_.init(robot,n))
     return false;
   node_ = n;
-  state_publisher_.reset(new realtime_tools::RealtimePublisher<pr2_mechanism_controllers::BaseControllerState>(n, base_kin_.name_ + "/state", 1));
-
-  int num_joints = base_kin_.num_wheels_ + base_kin_.num_casters_;
-  state_publisher_->msg_.joint_names.resize(num_joints);
-  state_publisher_->msg_.joint_velocity_measured.resize(num_joints);
-  state_publisher_->msg_.joint_effort_measured.resize(num_joints);
-  state_publisher_->msg_.joint_velocity_commanded.resize(num_joints);
-  state_publisher_->msg_.joint_effort_commanded.resize(num_joints);
-  state_publisher_->msg_.joint_velocity_error.resize(num_joints);
-  state_publisher_->msg_.joint_effort_error.resize(num_joints);
 
   //Get params from param server
   node_.param<double> ("max_translational_velocity", max_translational_velocity_,0.5);
@@ -103,7 +93,6 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
   for(int i = 0; i < base_kin_.num_casters_; i++)
   {
     control_toolbox::Pid p_i_d;
-    state_publisher_->msg_.joint_names[i] = base_kin_.caster_[i].joint_name_;
     if(!p_i_d.init(ros::NodeHandle(node_, base_kin_.caster_[i].joint_name_+"/velocity_controller")))
     {
       ROS_ERROR("Could not initialize pid for %s",base_kin_.caster_[i].joint_name_.c_str());
@@ -133,7 +122,6 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
   for(int j = 0; j < base_kin_.num_wheels_; j++)
   {
     control_toolbox::Pid p_i_d;
-    state_publisher_->msg_.joint_names[j + base_kin_.num_casters_] = base_kin_.wheel_[j].joint_name_;
     if(!p_i_d.init(ros::NodeHandle(node_,base_kin_.wheel_[j].joint_name_)))
     {
       ROS_ERROR("Could not initialize pid for %s",base_kin_.wheel_[j].joint_name_.c_str());
