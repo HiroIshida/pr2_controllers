@@ -210,14 +210,12 @@ void UnabstractedBaseController::update()
 
   if((current_time - cmd_received_timestamp_).toSec() > timeout_)
   {
-    direct_cmd_vel_.caster0_vel = 0;
-    direct_cmd_vel_.caster1_vel = 0;
-    direct_cmd_vel_.caster2_vel = 0;
-    direct_cmd_vel_.caster3_vel = 0;
-    direct_cmd_vel_.wheel0_vel = 0;
-    direct_cmd_vel_.wheel1_vel = 0;
-    direct_cmd_vel_.wheel2_vel = 0;
-    direct_cmd_vel_.wheel3_vel = 0;
+    for(auto& vel : direct_cmd_vel_.caster_vels){
+      vel = 0.0;
+    }
+    for(auto& vel : direct_cmd_vel_.wheel_vels){
+      vel = 0.0;
+    }
   }
   else{
     direct_cmd_vel_ = desired_cmd_; // TODO interpolate
@@ -252,14 +250,8 @@ void UnabstractedBaseController::setJointCommands()
 
 void UnabstractedBaseController::computeDesiredCasterSteer(const double &dT)
 {
-  std::array<double, 4> vel_arr = {
-    direct_cmd_vel_.caster0_vel,
-    direct_cmd_vel_.caster1_vel,
-    direct_cmd_vel_.caster2_vel,
-    direct_cmd_vel_.caster3_vel
-  };
   for(int i=0; i < base_kin_.num_casters_; i++){
-    base_kin_.caster_[i].steer_velocity_desired_ = vel_arr[i];
+    base_kin_.caster_[i].steer_velocity_desired_ = direct_cmd_vel_.caster_vels[i];
   }
 }
 
@@ -273,16 +265,9 @@ void UnabstractedBaseController::setDesiredCasterSteer()
 
 void UnabstractedBaseController::computeDesiredWheelSpeeds()
 {
-  std::array<double, 4> vel_arr = {
-    direct_cmd_vel_.wheel0_vel,
-    direct_cmd_vel_.wheel1_vel,
-    direct_cmd_vel_.wheel2_vel,
-    direct_cmd_vel_.wheel3_vel
-  };
-  std::cout << "wheel num : "<< base_kin_.num_wheels_ << std::endl; 
   for(int i = 0; i < (int) base_kin_.num_wheels_; i++)
   {
-    base_kin_.wheel_[i].wheel_speed_cmd_ = vel_arr[i];
+    base_kin_.wheel_[i].wheel_speed_cmd_ = direct_cmd_vel_.wheel_vels[i];
   }
 }
 
