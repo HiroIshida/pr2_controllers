@@ -47,20 +47,8 @@ namespace controller {
 UnabstractedBaseController::UnabstractedBaseController()
 {
   //init variables
-  cmd_vel_.linear.x = 0;
-  cmd_vel_.linear.y = 0;
-  cmd_vel_.angular.z = 0;
-
-  desired_vel_.linear.x = 0;
-  desired_vel_.linear.y = 0;
-  desired_vel_.angular.z = 0;
-
-  cmd_vel_t_.linear.x = 0;
-  cmd_vel_t_.linear.y = 0;
-  cmd_vel_t_.angular.z = 0;
-
+  // TODO init values vel vel_t desired_Vel
   new_cmd_available_ = false;
-
   pthread_mutex_init(&pr2_base_controller_lock_, NULL);
 }
 
@@ -81,15 +69,12 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
   node_.param<double> ("max_translational_acceleration/x", max_accel_.linear.x, .2);
   node_.param<double> ("max_translational_acceleration/y", max_accel_.linear.y, .2);
   node_.param<double> ("max_rotational_acceleration", max_accel_.angular.z, 10.0); //0.2
-
-  node_.param<double> ("kp_caster_steer", kp_caster_steer_, 80.0);
   node_.param<double> ("timeout", timeout_, 1.0);
 
   direct_cmd_sub_ = node_.subscribe<pr2_mechanism_controllers::BaseDirectCommand>("direct_command", 1, &UnabstractedBaseController::directCommandCallback, this);
 
   //casters
   caster_controller_.resize(base_kin_.num_casters_);
-  caster_position_pid_.resize(base_kin_.num_casters_);
   for(int i = 0; i < base_kin_.num_casters_; i++)
   {
     control_toolbox::Pid p_i_d;
@@ -99,11 +84,6 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
       return false;
     }
 
-    if(!caster_position_pid_[i].init(ros::NodeHandle(node_, base_kin_.caster_[i].joint_name_+"/position_controller")))
-    {
-      ROS_ERROR("Could not initialize position pid controller for %s",base_kin_.caster_[i].joint_name_.c_str());
-      return false;
-    }
     caster_controller_[i].reset(new JointVelocityController());
     if(!caster_controller_[i]->init(base_kin_.robot_state_, base_kin_.caster_[i].joint_name_, p_i_d))
     {
@@ -299,7 +279,7 @@ void UnabstractedBaseController::computeDesiredWheelSpeeds()
     direct_cmd_vel_.wheel2_vel,
     direct_cmd_vel_.wheel3_vel
   };
-  std::cout << direct_cmd_vel_ << std::endl; 
+  std::cout << "wheel num : "<< base_kin_.num_wheels_ << std::endl; 
   for(int i = 0; i < (int) base_kin_.num_wheels_; i++)
   {
     base_kin_.wheel_[i].wheel_speed_cmd_ = vel_arr[i];

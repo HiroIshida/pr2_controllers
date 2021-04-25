@@ -117,7 +117,6 @@ namespace controller
 
       ros::Subscriber direct_cmd_sub_;
 
-
       /*!
        * \brief timeout specifying time that the controller waits before setting the current velocity command to zero
        */
@@ -138,32 +137,12 @@ namespace controller
        */
       ros::Time cmd_received_timestamp_;
 
-      /*!
-       * \brief Input speed command vector represents the desired speed requested by the node. Note that this may differ from the
-       * current commanded speed due to acceleration limits imposed by the controller.
-       */
-      geometry_msgs::Twist cmd_vel_t_;
 
       pr2_mechanism_controllers::BaseDirectCommand direct_cmd_vel_t_;
 
       pr2_mechanism_controllers::BaseDirectCommand direct_cmd_vel_;
 
       pr2_mechanism_controllers::BaseDirectCommand desired_cmd_;
-
-      /*!
-       * \brief speed command vector used internally to represent the current commanded speed
-       */
-      geometry_msgs::Twist cmd_vel_;
-
-      /*!
-       * \brief Input speed command vector represents the desired speed requested by the node.
-       */
-      geometry_msgs::Twist desired_vel_;
-
-      /*!
-       * \brief velocity limits specified externally
-       */
-      geometry_msgs::Twist max_vel_;
 
       /*!
        * \brief acceleration limits specified externally
@@ -179,16 +158,6 @@ namespace controller
        * \brief maximum rotational velocity magnitude allowable
        */
       double max_rotational_velocity_;
-
-      /*!
-       * \brief local gain used for speed control of the caster (to achieve resultant position control)
-       */
-      double kp_caster_steer_;
-
-      /*!
-       * \brief low pass filter value used for finding stalls
-       */
-      double alpha_stall_;
 
       /*!
        * \brief vector that stores the wheel controllers
@@ -237,31 +206,6 @@ namespace controller
       void commandCallback(const geometry_msgs::TwistConstPtr& msg);
 
       void directCommandCallback(const pr2_mechanism_controllers::BaseDirectCommandConstPtr& msg);
-
-      /*!
-       * \brief callback message, used to remember where the base is commanded to go
-       */
-      geometry_msgs::Twist base_vel_msg_;
-
-      /*!
-       * \brief generic epsilon value that is used as a minimum or maximum allowable input value
-       */
-      double eps_;
-
-      /*!
-       * \brief minimum rotational velocity value allowable
-       */
-      double cmd_vel_rot_eps_;
-
-      /*!
-       * \brief minimum tranlational velocity value allowable
-       */
-      double cmd_vel_trans_eps_;
-
-      /*!
-       * \brief The pid controllers for caster position
-       */
-      std::vector<control_toolbox::Pid> caster_position_pid_;
 
       filters::MultiChannelTransferFunctionFilter<double> caster_vel_filter_;
       
