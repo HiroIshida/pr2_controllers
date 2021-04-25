@@ -47,7 +47,6 @@ namespace controller {
 UnabstractedBaseController::UnabstractedBaseController()
 {
   //init variables
-  // TODO init values vel vel_t desired_Vel
   new_cmd_available_ = false;
   pthread_mutex_init(&pr2_base_controller_lock_, NULL);
 }
@@ -128,12 +127,37 @@ bool UnabstractedBaseController::init(pr2_mechanism_model::RobotState *robot, ro
      return false;
   }
   filtered_velocity_.resize(base_kin_.num_casters_);
+
+  // In pr2_base_controller.cpp, this initialization process is called in the
+  // constructor. But in this case, we need numbers of wheels and casters
+  // thus the initialization must take place here.
+  auto reset_cmd = [&, this](pr2_mechanism_controllers::BaseDirectCommand& cmd){
+    cmd.wheel_vels = std::vector<double>(base_kin_.num_wheels_, 0.0);
+    cmd.caster_vels = std::vector<double>(base_kin_.num_casters_, 0.0);
+  };
+  reset_cmd(direct_cmd_vel_);
+  reset_cmd(direct_cmd_vel_t_);
+  reset_cmd(desired_cmd_);
   return true;
 }
 
 // Set the base velocity command
 void UnabstractedBaseController::setCommand(const pr2_mechanism_controllers::BaseDirectCommand &direct_cmd_vel)
 {
+  if(direct_cmd_vel.wheel_vels.size()!=base_kin_.num_wheels_){
+     ROS_ERROR("BaseController: wheel's vel array requires %d elements, but obtained %lu.", 
+         base_kin_.num_wheels_,
+         direct_cmd_vel.wheel_vels.size());
+     return;
+  }
+  if(direct_cmd_vel.caster_vels.size()!=base_kin_.num_casters_){
+     ROS_ERROR("BaseController: caster's vel array requires %d elements, but obtained %lu.", 
+         base_kin_.num_casters_,
+         direct_cmd_vel.caster_vels.size());
+     return;
+  }
+
+  for(int i = 0; i < base_kin_.num_casters_; i++)
   // TODO do some clamping procedure
   direct_cmd_vel_t_ = direct_cmd_vel;
   cmd_received_timestamp_ = base_kin_.robot_state_->getTime();
