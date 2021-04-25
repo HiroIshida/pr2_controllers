@@ -384,6 +384,16 @@ void UnabstractedBaseController::setJointCommands()
 
 void UnabstractedBaseController::computeDesiredCasterSteer(const double &dT)
 {
+  std::array<double, 4> vel_arr = {
+    direct_cmd_vel_.caster0_vel,
+    direct_cmd_vel_.caster1_vel,
+    direct_cmd_vel_.caster2_vel,
+    direct_cmd_vel_.caster3_vel
+  };
+  for(int i=0; i < base_kin_.num_casters_; i++){
+    base_kin_.caster_[i].steer_velocity_desired_ = vel_arr[i];
+  }
+  /*
   geometry_msgs::Twist result;
 
   double steer_angle_desired(0.0), steer_angle_desired_m_pi(0.0);
@@ -428,6 +438,7 @@ void UnabstractedBaseController::computeDesiredCasterSteer(const double &dT)
           ros::Duration(dT));
     base_kin_.caster_[i].caster_position_error_ = error_steer;
   }
+  */
 }
 
 void UnabstractedBaseController::setDesiredCasterSteer()
